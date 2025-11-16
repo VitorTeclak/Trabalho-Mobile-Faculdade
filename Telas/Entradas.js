@@ -1,5 +1,13 @@
-import React, { useState } from "react";
-import { View, Text, FlatList, StyleSheet, Button, TextInput } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  Button,
+  TextInput,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function ProductCategoryRow({ category }) {
   return (
@@ -69,13 +77,30 @@ function ProductTable({ products }) {
 }
 
 function FilterableProductTable() {
-  const [products, setProducts] = useState([
-    { category: "Entrada", price: "R$27,50", name: "Uber" },
-    { category: "Entrada", price: "R$13,00", name: "Uber" },
-  ]);
-
+  const [products, setProducts] = useState([]);
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const data = await AsyncStorage.getItem("@entradas");
+      if (data) setProducts(JSON.parse(data));
+    } catch (e) {
+      console.log("Erro ao carregar entradas:", e);
+    }
+  };
+
+  const saveData = async (lista) => {
+    try {
+      await AsyncStorage.setItem("@entradas", JSON.stringify(lista));
+    } catch (e) {
+      console.log("Erro ao salvar entradas:", e);
+    }
+  };
 
   const handleInsert = () => {
     if (!newName || !newPrice) {
@@ -88,19 +113,21 @@ function FilterableProductTable() {
       name: newName,
       price: `R$${parseFloat(newPrice).toFixed(2).replace(".", ",")}`,
     };
-    setProducts((prev) => [...prev, novoItem]);
 
-    // limpa os inputs
+    const updatedList = [...products, novoItem];
+
+    setProducts(updatedList);
+    saveData(updatedList);
+
     setNewName("");
     setNewPrice("");
   };
 
   return (
     <View style={styles.container}>
-      {/* Formulário */}
       <TextInput
         style={styles.input}
-        placeholder="Nome do entrada"
+        placeholder="Nome da entrada"
         value={newName}
         onChangeText={setNewName}
       />
@@ -111,9 +138,9 @@ function FilterableProductTable() {
         onChangeText={setNewPrice}
         keyboardType="numeric"
       />
+
       <Button title="Inserir" onPress={handleInsert} />
 
-      {/* Lista */}
       <ProductTable products={products} />
     </View>
   );
@@ -122,6 +149,7 @@ function FilterableProductTable() {
 export default function Entradas() {
   return <FilterableProductTable />;
 }
+
 
 const styles = StyleSheet.create({
   container: {
